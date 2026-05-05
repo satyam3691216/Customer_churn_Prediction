@@ -59,3 +59,45 @@ plt.show()
 print("\nInsights:")
 print("- Customers with higher monthly charges tend to churn more.")
 print("- Month-to-month contract customers have the highest churn rate.")
+print("\n--- Step 4: Feature Engineering & Modeling ---")
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+
+# 1. Convert categorical variables → numeric
+df_model = pd.get_dummies(df, drop_first=True)
+
+# 2. Define features and target
+X = df_model.drop('Churn_Yes', axis=1)
+y = df_model['Churn_Yes']
+
+# 3. Train-test split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# -------------------------
+# Model 1: Logistic Regression
+# -------------------------
+lr = LogisticRegression(max_iter=1000)
+lr.fit(X_train, y_train)
+
+lr_pred = lr.predict(X_test)
+
+print("\nLogistic Regression Results:")
+print("Accuracy:", accuracy_score(y_test, lr_pred))
+print(classification_report(y_test, lr_pred))
+
+# -------------------------
+# Model 2: Random Forest
+# -------------------------
+rf = RandomForestClassifier(random_state=42)
+rf.fit(X_train, y_train)
+
+rf_pred = rf.predict(X_test)
+
+print("\nRandom Forest Results:")
+print("Accuracy:", accuracy_score(y_test, rf_pred))
+print(classification_report(y_test, rf_pred))
