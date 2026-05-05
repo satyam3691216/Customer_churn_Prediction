@@ -27,3 +27,35 @@ df.dropna(inplace=True)
 # 5. Verify
 print("\nMissing values AFTER cleaning:\n", df.isnull().sum())
 print("\nCleaned Shape:", df.shape)
+print("\n--- Step 3: Exploratory Data Analysis ---")
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+sns.set_style("whitegrid")
+
+# 1. Churn Distribution
+plt.figure()
+sns.countplot(x=df['Churn'])
+plt.title("Customer Churn Distribution")
+plt.savefig("outputs/churn_distribution.png")
+plt.show()
+
+# 2. Monthly Charges vs Churn
+plt.figure()
+sns.boxplot(x='Churn', y='MonthlyCharges', data=df)
+plt.title("Monthly Charges vs Churn")
+plt.savefig("outputs/monthly_charges_vs_churn.png")
+plt.show()
+
+# 3. Contract Type vs Churn (important business insight)
+plt.figure()
+sns.countplot(x='Contract', hue='Churn', data=df)
+plt.title("Contract Type vs Churn")
+plt.xticks(rotation=30)
+plt.savefig("outputs/contract_vs_churn.png")
+plt.show()
+
+print("\nInsights:")
+print("- Customers with higher monthly charges tend to churn more.")
+print("- Month-to-month contract customers have the highest churn rate.")
