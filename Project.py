@@ -1,115 +1,250 @@
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix
+)
 
 print("Step 1: Loading dataset...")
 
 df = pd.read_excel("churn.xlsx")
 
+# Clean column names
+df.columns = df.columns.str.strip()
+
 print("Dataset loaded successfully\n")
 print(df.head())
+
 print("\nShape:", df.shape)
 print("\nColumns:\n", df.columns)
-print("\n--- Step 2: Data Cleaning ---")
 
-# 1. Drop ID column
+# Create outputs folder
+os.makedirs("outputs", exist_ok=True)
+
+print("\nStep 2: Data Cleaning")
+
+# Drop ID column
 if 'customerID' in df.columns:
     df.drop(columns=['customerID'], inplace=True)
 
-# 2. Fix TotalCharges (very important for this dataset)
+# Fix TotalCharges column
 if 'TotalCharges' in df.columns:
-    df['TotalCharges'] = pd.to_numeric(df['TotalCharges'], errors='coerce')
+    df['TotalCharges'] = pd.to_numeric(
+        df['TotalCharges'],
+        errors='coerce'
+    )
 
-# 3. Check missing values
-print("\nMissing values BEFORE cleaning:\n", df.isnull().sum())
+# Check missing values
+print("\nMissing values BEFORE cleaning:\n")
+print(df.isnull().sum())
 
-# 4. Remove missing rows
+# Remove missing rows
 df.dropna(inplace=True)
 
-# 5. Verify
-print("\nMissing values AFTER cleaning:\n", df.isnull().sum())
-print("\nCleaned Shape:", df.shape)
-print("\n--- Step 3: Exploratory Data Analysis ---")
+# Verify cleaning
+print("\nMissing values AFTER cleaning:\n")
+print(df.isnull().sum())
 
-import matplotlib.pyplot as plt
-import seaborn as sns
+print("\nCleaned Shape:", df.shape)
+
+print("\nStep 3: Exploratory Data Analysis")
 
 sns.set_style("whitegrid")
 
-# 1. Churn Distribution
-plt.figure()
-sns.countplot(x=df['Churn'])
+# Detect target column safely
+target_col = None
+
+possible_targets = ['Churn', 'churn', 'Exited', 'Attrition']
+
+for col in possible_targets:
+    if col in df.columns:
+        target_col = col
+        break
+
+if target_col is None:
+    raise ValueError("Target column not found.")
+
+# Churn Distribution
+plt.figure(figsize=(6,4))
+
+sns.countplot(
+    x=df[target_col],
+    palette="Set2"
+)
+
 plt.title("Customer Churn Distribution")
-plt.savefig("outputs/churn_distribution.png")
+plt.xlabel("Churn")
+plt.ylabel("Count")
+
+plt.tight_layout()
+
+plt.savefig(
+    "outputs/churn_distribution.png",
+    dpi=300
+)
+
 plt.show()
 
-# 2. Monthly Charges vs Churn
-plt.figure()
-sns.boxplot(x='Churn', y='MonthlyCharges', data=df)
-plt.title("Monthly Charges vs Churn")
-plt.savefig("outputs/monthly_charges_vs_churn.png")
-plt.show()
+# Monthly Charges vs Churn
+if 'MonthlyCharges' in df.columns:
 
-# 3. Contract Type vs Churn (important business insight)
-plt.figure()
-sns.countplot(x='Contract', hue='Churn', data=df)
-plt.title("Contract Type vs Churn")
-plt.xticks(rotation=30)
-plt.savefig("outputs/contract_vs_churn.png")
-plt.show()
+    plt.figure(figsize=(7,5))
+
+    sns.boxplot(
+        x=target_col,
+        y='MonthlyCharges',
+        data=df,
+        palette="coolwarm"
+    )
+
+    plt.title("Monthly Charges vs Churn")
+
+    plt.tight_layout()
+
+    plt.savefig(
+        "outputs/monthly_charges_vs_churn.png",
+        dpi=300
+    )
+
+    plt.show()
+
+# Contract Type vs Churn
+if 'Contract' in df.columns:
+
+    plt.figure(figsize=(8,5))
+
+    sns.countplot(
+        x='Contract',
+        hue=target_col,
+        data=df,
+        palette="viridis"
+    )
+
+    plt.title("Contract Type vs Churn")
+
+    plt.xticks(rotation=20)
+
+    plt.tight_layout()
+
+    plt.savefig(
+        "outputs/contract_vs_churn.png",
+        dpi=300
+    )
+
+    plt.show()
 
 print("\nInsights:")
 print("- Customers with higher monthly charges tend to churn more.")
 print("- Month-to-month contract customers have the highest churn rate.")
-print("\n--- Step 4: Feature Engineering & Modeling ---")
 
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report
+print("\nStep 4: Feature Engineering & Modeling")
 
-# 1. Convert categorical variables → numeric
+# Convert categorical variables → numeric
 df_model = pd.get_dummies(df, drop_first=True)
 
-# 2. Define features and target
-X = df_model.drop('Churn_Yes', axis=1)
-y = df_model['Churn_Yes']
+# Detect encoded target column
+target_encoded = None
 
-# 3. Train-test split
+for col in df_model.columns:
+    if col.startswith(target_col + "_"):
+        target_encoded = col
+        break
+
+if target_encoded is None:
+    raise ValueError("Encoded target column not found.")
+
+# Define features and target
+X = df_model.drop(target_encoded, axis=1)
+y = df_model[target_encoded]
+
+# Train-test split
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
 )
 
-# -------------------------
-# Model 1: Logistic Regression
-# -------------------------
-lr = LogisticRegression(max_iter=1000)
+print("\nTraining Shape:", X_train.shape)
+print("Testing Shape:", X_test.shape)
+
+# Logistic Regression
+print("\nLogistic Regression Results")
+
+lr = LogisticRegression(max_iter=2000)
+
 lr.fit(X_train, y_train)
 
 lr_pred = lr.predict(X_test)
 
-print("\nLogistic Regression Results:")
-print("Accuracy:", accuracy_score(y_test, lr_pred))
+print("\nAccuracy:",
+      round(accuracy_score(y_test, lr_pred), 2))
+
+print("\nClassification Report:\n")
 print(classification_report(y_test, lr_pred))
 
-# -------------------------
-# Model 2: Random Forest
-# -------------------------
+# Random Forest
+print("\nRandom Forest Results")
+
 rf = RandomForestClassifier(random_state=42)
+
 rf.fit(X_train, y_train)
 
 rf_pred = rf.predict(X_test)
 
-print("\nRandom Forest Results:")
-print("Accuracy:", accuracy_score(y_test, rf_pred))
+print("\nAccuracy:",
+      round(accuracy_score(y_test, rf_pred), 2))
+
+print("\nClassification Report:\n")
 print(classification_report(y_test, rf_pred))
-print("\n--- Step 6: Feature Importance Analysis ---")
 
-# Get feature importance from Random Forest
-importance = pd.Series(rf.feature_importances_, index=X.columns)
+# Confusion Matrix
+plt.figure(figsize=(6,5))
 
-# Top 10 important features
-top_features = importance.sort_values(ascending=False).head(10)
+cm = confusion_matrix(y_test, rf_pred)
 
-# Plot
+sns.heatmap(
+    cm,
+    annot=True,
+    fmt='d',
+    cmap='Blues'
+)
+
+plt.title("Random Forest Confusion Matrix")
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+
+plt.tight_layout()
+
+plt.savefig(
+    "outputs/confusion_matrix.png",
+    dpi=300
+)
+
+plt.show()
+
+print("\nStep 5: Feature Importance Analysis")
+
+# Feature importance
+importance = pd.Series(
+    rf.feature_importances_,
+    index=X.columns
+)
+
+top_features = (
+    importance
+    .sort_values(ascending=False)
+    .head(10)
+)
+
+# Plot feature importance
 plt.figure(figsize=(10,6))
 
 sns.barplot(
@@ -123,18 +258,45 @@ plt.xlabel("Importance Score")
 plt.ylabel("Features")
 
 plt.tight_layout()
-plt.savefig("outputs/feature_importance.png", dpi=300)
+
+plt.savefig(
+    "outputs/feature_importance.png",
+    dpi=300
+)
+
 plt.show()
 
-print("\nTop Features Influencing Churn:")
+print("\nTop Features Influencing Churn:\n")
 print(top_features)
 
-print("\nInsight:")
+print("\nInsights:")
 print("- Contract type, tenure, and monthly charges strongly influence churn.")
 print("- Customers with shorter contracts are more likely to leave.")
 
+# Correlation Heatmap
+plt.figure(figsize=(12,8))
+
+sns.heatmap(
+    df_model.corr(),
+    cmap="coolwarm"
+)
+
+plt.title("Feature Correlation Heatmap")
+
+plt.tight_layout()
+
+plt.savefig(
+    "outputs/correlation_heatmap.png",
+    dpi=300
+)
+
+plt.show()
+
 # Save cleaned dataset
-df.to_csv("clean_churn_data.csv", index=False)
+df.to_csv(
+    "clean_churn_data.csv",
+    index=False
+)
 
 print("\nCleaned dataset saved successfully.")
 print("Project Completed Successfully.")
