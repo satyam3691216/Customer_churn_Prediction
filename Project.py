@@ -101,3 +101,34 @@ rf_pred = rf.predict(X_test)
 print("\nRandom Forest Results:")
 print("Accuracy:", accuracy_score(y_test, rf_pred))
 print(classification_report(y_test, rf_pred))
+print("\n--- Step 6: Feature Importance Analysis ---")
+
+# Get feature importance from Random Forest
+importance = pd.Series(rf.feature_importances_, index=X.columns)
+
+# Top 10 important features
+top_features = importance.sort_values(ascending=False).head(10)
+
+# Plot
+plt.figure(figsize=(10,6))
+
+sns.barplot(
+    x=top_features.values,
+    y=top_features.index,
+    palette="viridis"
+)
+
+plt.title("Top 10 Features Affecting Customer Churn")
+plt.xlabel("Importance Score")
+plt.ylabel("Features")
+
+plt.tight_layout()
+plt.savefig("outputs/feature_importance.png", dpi=300)
+plt.show()
+
+print("\nTop Features Influencing Churn:")
+print(top_features)
+
+print("\nInsight:")
+print("- Contract type, tenure, and monthly charges strongly influence churn.")
+print("- Customers with shorter contracts are more likely to leave.")
