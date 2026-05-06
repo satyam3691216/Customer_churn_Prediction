@@ -12,76 +12,101 @@ from sklearn.metrics import (
     confusion_matrix
 )
 
-print("Step 1: Loading dataset...")
+# Professional Graph Styling
+sns.set_theme(
+    style="whitegrid",
+    palette="deep",
+    context="talk"
+)
+
+plt.rcParams['figure.figsize'] = (10, 6)
+plt.rcParams['axes.titlesize'] = 18
+plt.rcParams['axes.labelsize'] = 14
+plt.rcParams['xtick.labelsize'] = 11
+plt.rcParams['ytick.labelsize'] = 11
+
+# Step 1: Load Dataset
+
+print("Loading dataset...")
 
 df = pd.read_excel("churn.xlsx")
 
 # Clean column names
 df.columns = df.columns.str.strip()
 
-print("Dataset loaded successfully\n")
+print("\nDataset Loaded Successfully")
 print(df.head())
 
-print("\nShape:", df.shape)
-print("\nColumns:\n", df.columns)
+print("\nDataset Shape:", df.shape)
+
+print("\nDataset Columns:")
+print(list(df.columns))
 
 # Create outputs folder
 os.makedirs("outputs", exist_ok=True)
 
-print("\nStep 2: Data Cleaning")
+# Step 2: Data Cleaning
 
-# Drop ID column
-if 'customerID' in df.columns:
-    df.drop(columns=['customerID'], inplace=True)
+print("\nData Cleaning Started")
 
-# Fix TotalCharges column
-if 'TotalCharges' in df.columns:
-    df['TotalCharges'] = pd.to_numeric(
-        df['TotalCharges'],
+# Remove unnecessary ID columns
+possible_id_cols = [
+    'customerID',
+    'CustomerID',
+    'Customer ID'
+]
+
+for col in possible_id_cols:
+    if col in df.columns:
+        df.drop(columns=[col], inplace=True)
+
+# Convert Total Charges column if available
+if 'Total Charges' in df.columns:
+    df['Total Charges'] = pd.to_numeric(
+        df['Total Charges'],
         errors='coerce'
     )
 
 # Check missing values
-print("\nMissing values BEFORE cleaning:\n")
+print("\nMissing Values Before Cleaning:\n")
 print(df.isnull().sum())
 
-# Remove missing rows
+# Remove missing values
 df.dropna(inplace=True)
 
 # Verify cleaning
-print("\nMissing values AFTER cleaning:\n")
+print("\nMissing Values After Cleaning:\n")
 print(df.isnull().sum())
 
-print("\nCleaned Shape:", df.shape)
+print("\nCleaned Dataset Shape:", df.shape)
 
-print("\nStep 3: Exploratory Data Analysis")
+# Step 3: Exploratory Data Analysis
 
-sns.set_style("whitegrid")
+print("\nExploratory Data Analysis")
 
-# Detect target column safely
-target_col = None
-
-possible_targets = ['Churn', 'churn', 'Exited', 'Attrition']
-
-for col in possible_targets:
-    if col in df.columns:
-        target_col = col
-        break
-
-if target_col is None:
-    raise ValueError("Target column not found.")
+# Target column
+target_col = 'Churn Value'
 
 # Churn Distribution
-plt.figure(figsize=(6,4))
+plt.figure(figsize=(7,5))
+
+colors = ["#00B894", "#D63031"]
 
 sns.countplot(
     x=df[target_col],
-    palette="Set2"
+    palette=colors
 )
 
-plt.title("Customer Churn Distribution")
-plt.xlabel("Churn")
-plt.ylabel("Count")
+plt.title(
+    "Customer Churn Distribution",
+    fontsize=20,
+    weight='bold'
+)
+
+plt.xlabel("Churn Value")
+plt.ylabel("Customer Count")
+
+plt.grid(axis='y', linestyle='--', alpha=0.4)
 
 plt.tight_layout()
 
@@ -93,18 +118,28 @@ plt.savefig(
 plt.show()
 
 # Monthly Charges vs Churn
-if 'MonthlyCharges' in df.columns:
+if 'Monthly Charges' in df.columns:
 
-    plt.figure(figsize=(7,5))
+    plt.figure(figsize=(8,6))
 
     sns.boxplot(
         x=target_col,
-        y='MonthlyCharges',
+        y='Monthly Charges',
         data=df,
-        palette="coolwarm"
+        palette=["#0984E3", "#E17055"],
+        linewidth=2
     )
 
-    plt.title("Monthly Charges vs Churn")
+    plt.title(
+        "Monthly Charges vs Customer Churn",
+        fontsize=20,
+        weight='bold'
+    )
+
+    plt.xlabel("Churn Value")
+    plt.ylabel("Monthly Charges")
+
+    plt.grid(alpha=0.3)
 
     plt.tight_layout()
 
@@ -118,18 +153,27 @@ if 'MonthlyCharges' in df.columns:
 # Contract Type vs Churn
 if 'Contract' in df.columns:
 
-    plt.figure(figsize=(8,5))
+    plt.figure(figsize=(10,6))
 
     sns.countplot(
         x='Contract',
         hue=target_col,
         data=df,
-        palette="viridis"
+        palette="magma"
     )
 
-    plt.title("Contract Type vs Churn")
+    plt.title(
+        "Contract Type vs Customer Churn",
+        fontsize=20,
+        weight='bold'
+    )
 
-    plt.xticks(rotation=20)
+    plt.xlabel("Contract Type")
+    plt.ylabel("Customer Count")
+
+    plt.xticks(rotation=15)
+
+    plt.grid(axis='y', linestyle='--', alpha=0.4)
 
     plt.tight_layout()
 
@@ -141,28 +185,19 @@ if 'Contract' in df.columns:
     plt.show()
 
 print("\nInsights:")
-print("- Customers with higher monthly charges tend to churn more.")
-print("- Month-to-month contract customers have the highest churn rate.")
+print("- Customers with shorter contracts churn more.")
+print("- Higher monthly charges are associated with higher churn.")
 
-print("\nStep 4: Feature Engineering & Modeling")
+# Step 4: Feature Engineering
 
-# Convert categorical variables → numeric
+print("\nFeature Engineering")
+
+# Convert categorical variables into numeric
 df_model = pd.get_dummies(df, drop_first=True)
 
-# Detect encoded target column
-target_encoded = None
-
-for col in df_model.columns:
-    if col.startswith(target_col + "_"):
-        target_encoded = col
-        break
-
-if target_encoded is None:
-    raise ValueError("Encoded target column not found.")
-
-# Define features and target
-X = df_model.drop(target_encoded, axis=1)
-y = df_model[target_encoded]
+# Features and target
+X = df_model.drop('Churn Value', axis=1)
+y = df_model['Churn Value']
 
 # Train-test split
 X_train, X_test, y_train, y_test = train_test_split(
@@ -175,8 +210,9 @@ X_train, X_test, y_train, y_test = train_test_split(
 print("\nTraining Shape:", X_train.shape)
 print("Testing Shape:", X_test.shape)
 
-# Logistic Regression
-print("\nLogistic Regression Results")
+# Step 5: Logistic Regression
+
+print("\nLogistic Regression Model")
 
 lr = LogisticRegression(max_iter=2000)
 
@@ -184,14 +220,15 @@ lr.fit(X_train, y_train)
 
 lr_pred = lr.predict(X_test)
 
-print("\nAccuracy:",
-      round(accuracy_score(y_test, lr_pred), 2))
+print("\nLogistic Regression Accuracy:")
+print(round(accuracy_score(y_test, lr_pred), 2))
 
 print("\nClassification Report:\n")
 print(classification_report(y_test, lr_pred))
 
-# Random Forest
-print("\nRandom Forest Results")
+# Step 6: Random Forest
+
+print("\nRandom Forest Model")
 
 rf = RandomForestClassifier(random_state=42)
 
@@ -199,14 +236,17 @@ rf.fit(X_train, y_train)
 
 rf_pred = rf.predict(X_test)
 
-print("\nAccuracy:",
-      round(accuracy_score(y_test, rf_pred), 2))
+print("\nRandom Forest Accuracy:")
+print(round(accuracy_score(y_test, rf_pred), 2))
 
 print("\nClassification Report:\n")
 print(classification_report(y_test, rf_pred))
 
-# Confusion Matrix
-plt.figure(figsize=(6,5))
+# Step 7: Confusion Matrix
+
+print("\nGenerating Confusion Matrix")
+
+plt.figure(figsize=(7,6))
 
 cm = confusion_matrix(y_test, rf_pred)
 
@@ -214,12 +254,19 @@ sns.heatmap(
     cm,
     annot=True,
     fmt='d',
-    cmap='Blues'
+    cmap='YlGnBu',
+    linewidths=1,
+    linecolor='white'
 )
 
-plt.title("Random Forest Confusion Matrix")
-plt.xlabel("Predicted")
-plt.ylabel("Actual")
+plt.title(
+    "Random Forest Confusion Matrix",
+    fontsize=18,
+    weight='bold'
+)
+
+plt.xlabel("Predicted Label")
+plt.ylabel("Actual Label")
 
 plt.tight_layout()
 
@@ -230,9 +277,10 @@ plt.savefig(
 
 plt.show()
 
-print("\nStep 5: Feature Importance Analysis")
+# Step 8: Feature Importance
 
-# Feature importance
+print("\nFeature Importance Analysis")
+
 importance = pd.Series(
     rf.feature_importances_,
     index=X.columns
@@ -244,18 +292,24 @@ top_features = (
     .head(10)
 )
 
-# Plot feature importance
-plt.figure(figsize=(10,6))
+plt.figure(figsize=(11,6))
 
 sns.barplot(
     x=top_features.values,
     y=top_features.index,
-    palette="viridis"
+    palette="rocket"
 )
 
-plt.title("Top 10 Features Affecting Customer Churn")
+plt.title(
+    "Top 10 Features Affecting Customer Churn",
+    fontsize=20,
+    weight='bold'
+)
+
 plt.xlabel("Importance Score")
 plt.ylabel("Features")
+
+plt.grid(axis='x', linestyle='--', alpha=0.4)
 
 plt.tight_layout()
 
@@ -270,18 +324,27 @@ print("\nTop Features Influencing Churn:\n")
 print(top_features)
 
 print("\nInsights:")
-print("- Contract type, tenure, and monthly charges strongly influence churn.")
+print("- Contract type, tenure, and monthly charges strongly affect churn.")
 print("- Customers with shorter contracts are more likely to leave.")
 
-# Correlation Heatmap
-plt.figure(figsize=(12,8))
+# Step 9: Correlation Heatmap
+
+print("\nGenerating Correlation Heatmap")
+
+plt.figure(figsize=(14,10))
 
 sns.heatmap(
     df_model.corr(),
-    cmap="coolwarm"
+    cmap="Spectral",
+    center=0,
+    linewidths=0.3
 )
 
-plt.title("Feature Correlation Heatmap")
+plt.title(
+    "Feature Correlation Heatmap",
+    fontsize=20,
+    weight='bold'
+)
 
 plt.tight_layout()
 
@@ -292,11 +355,12 @@ plt.savefig(
 
 plt.show()
 
-# Save cleaned dataset
+# Step 10: Save Clean Dataset
+
 df.to_csv(
     "clean_churn_data.csv",
     index=False
 )
 
 print("\nCleaned dataset saved successfully.")
-print("Project Completed Successfully.")
+print("\nProject Completed Successfully.")
