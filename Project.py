@@ -132,3 +132,9 @@ print(top_features)
 print("\nInsight:")
 print("- Contract type, tenure, and monthly charges strongly influence churn.")
 print("- Customers with shorter contracts are more likely to leave.")
+
+# Save cleaned dataset
+df.to_csv("clean_churn_data.csv", index=False)
+
+print("\nCleaned dataset saved successfully.")
+print("Project Completed Successfully.")
